@@ -1,0 +1,26 @@
+# Unity-generated files if this repository is opened as a project
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+.vs/
+.idea/
+*.csproj
+*.sln
+*.unitypackage
+
+# Keep only the distributable Unity assets and the user manual
+/Assets/*
+!/Assets/SH/
+!/Assets/SH.meta
+/Assets/SH/*
+!/Assets/SH/HamaStream/
+!/Assets/SH/HamaStream.meta
+/Docs/*
+!/Docs/USER_MANUAL.md
+/ClientSimStorage/
+/Packages/
+/ProjectSettings/

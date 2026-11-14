@@ -22,6 +22,10 @@
 /Docs/*
 !/Docs/USER_MANUAL.md
 !/Docs/QUICK_START.md
+!/Docs/images/
+/Docs/images/*
+!/Docs/images/overview.png
+!/Docs/images/overview-annotated.svg
 /ClientSimStorage/
 /Packages/
 /ProjectSettings/

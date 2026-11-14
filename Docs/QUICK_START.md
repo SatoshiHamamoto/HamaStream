@@ -5,18 +5,12 @@
 ## セットアップ
 
 1. VRChat Worlds SDK と UdonSharp を導入した Unity 2022.3.22f1 プロジェクトを用意します。
-2. このリポジトリの `Assets/SH/HamaStream` を、対応する `.meta` とともに Unity プロジェクトの同じパスへコピーします。`.unitypackage` が GitHub Release にある場合は、Unity の `Assets > Import Package > Custom Package...` で全項目をインポートできます。
+2. unitypackageを、Unity の `Assets > Import Package > Custom Package...` からインポートします。
 3. Unity の読み込みと UdonSharp のコンパイルが終わったら、`Tools > HamaStream > Add Minimal Player To Scene` を実行します。
-
-
-4. 配置した `HamaStream` の `Playback Area` に割り当てられた BoxCollider の `Center` と `Size` を調整します。`Is Trigger` はオンにします。
-
-5. 必要なら `PlaylistControls1` と `PlaylistControls2` に付く `HamaStreamPlaylistController` の Inspector で、各項目の表示名と URL を設定します。リストを増やす場合はプレイヤーを選択して `Tools > HamaStream > Add Playlist To Selected Player`、減らす場合は対象の `PlaylistControls` を選択して `Tools > HamaStream > Remove Selected Playlist` を実行します。
-
+4. 配置した `HamaStream` の `Playback Area` に割り当てられた BoxCollider の `Center` と `Size` を調整します。
+5. 必要なら `PlaylistControls1` と `PlaylistControls2` に付く `HamaStreamPlaylistController` の Inspector で、各項目の表示名と URL を設定します。
 6. `Tools > HamaStream > Configure Scene Playlists` と `Tools > HamaStream > Configure Scene URL Load Peers` を実行し、シーンを保存します。プレイリストを増減した場合は前者、プレイヤーを追加・複製・削除した場合は両方を再実行します。
-
 7. VRChat の Build & Test で確認します。
-
 Prefab だけを作り直す場合は `Tools > HamaStream > Rebuild Minimal Prefab` を使用します。詳細は [セットアップ手順](USER_MANUAL.md#セットアップの詳細) を参照してください。
 
 ## VR 内での操作

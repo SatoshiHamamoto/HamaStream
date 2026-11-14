@@ -11,7 +11,7 @@ HamaStream は VRChat の PC 向けワールドで使う、AVPro Video ベース
 
 ## 導入
 
-導入と Inspector の設定は [使用マニュアル](Docs/USER_MANUAL.md) を参照してください。
+初めて使う場合は [クイックスタート](Docs/QUICK_START.md) を参照してください。Inspector の設定は [使用マニュアル](Docs/USER_MANUAL.md) にまとめています。
 
 1. このリポジトリの `Assets/SH/HamaStream` を、対応する `.meta` とともに Unity プロジェクトの同じパスへコピーします。`.unitypackage` が GitHub Release にある場合は、Unity の `Assets > Import Package > Custom Package...` から全項目をインポートできます。
 2. Unity のインポートと UdonSharp のコンパイルが終わるまで待ち、Console にエラーがないことを確認します。

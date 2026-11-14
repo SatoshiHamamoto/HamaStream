@@ -1,6 +1,6 @@
 # HamaStream 詳細マニュアル
 
-[README](../README.md)
+[README](../README.md) | [クイックスタート](QUICK_START.md)
 
 ## 対象環境
 

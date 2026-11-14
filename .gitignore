@@ -12,7 +12,7 @@
 *.sln
 *.unitypackage
 
-# Keep only the distributable Unity assets and the user manual
+# Keep only the distributable Unity assets and public guides
 /Assets/*
 !/Assets/SH/
 !/Assets/SH.meta
@@ -21,6 +21,7 @@
 !/Assets/SH/HamaStream.meta
 /Docs/*
 !/Docs/USER_MANUAL.md
+!/Docs/QUICK_START.md
 /ClientSimStorage/
 /Packages/
 /ProjectSettings/

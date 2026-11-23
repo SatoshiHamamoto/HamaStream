@@ -5,6 +5,7 @@ using UnityEngine;
 [CustomEditor(typeof(HamaStreamPlaylistController))]
 public class HamaStreamPlaylistControllerEditor : Editor
 {
+    private static bool _showInternal;
     private SerializedProperty _mainController;
     private SerializedProperty _playlistButtons;
     private SerializedProperty _playlistDisplayNameLabels;
@@ -33,18 +34,6 @@ public class HamaStreamPlaylistControllerEditor : Editor
 
         serializedObject.Update();
 
-        EditorGUILayout.LabelField("Player Reference", EditorStyles.boldLabel);
-        EditorGUILayout.PropertyField(_mainController);
-
-        EditorGUILayout.Space();
-        EditorGUILayout.LabelField("Generated UI References", EditorStyles.boldLabel);
-        EditorGUI.BeginDisabledGroup(true);
-        EditorGUILayout.PropertyField(_playlistButtons, true);
-        EditorGUILayout.PropertyField(_playlistDisplayNameLabels, true);
-        EditorGUILayout.PropertyField(_playlistUrlLabels, true);
-        EditorGUI.EndDisabledGroup();
-
-        EditorGUILayout.Space();
         HamaStreamPlaylistController controller = (HamaStreamPlaylistController)target;
         EditorGUILayout.LabelField("Playlist " + controller.PlaylistNumber, EditorStyles.boldLabel);
         EditorGUILayout.HelpBox(
@@ -74,8 +63,21 @@ public class HamaStreamPlaylistControllerEditor : Editor
         }
 
         EditorGUILayout.Space();
-        EditorGUILayout.LabelField("Appearance", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(_selectedButtonColor);
+
+        EditorGUILayout.Space();
+        _showInternal = EditorGUILayout.Foldout(_showInternal, "Internal", true);
+        if (_showInternal)
+        {
+            EditorGUI.indentLevel++;
+            EditorGUILayout.PropertyField(_mainController);
+            EditorGUI.BeginDisabledGroup(true);
+            EditorGUILayout.PropertyField(_playlistButtons, true);
+            EditorGUILayout.PropertyField(_playlistDisplayNameLabels, true);
+            EditorGUILayout.PropertyField(_playlistUrlLabels, true);
+            EditorGUI.EndDisabledGroup();
+            EditorGUI.indentLevel--;
+        }
 
         if (!serializedObject.ApplyModifiedProperties())
         {

@@ -11,14 +11,13 @@
 *.csproj
 *.sln
 *.unitypackage
+*.meta
 
 # Keep only the distributable Unity assets and public guides
 /Assets/*
 !/Assets/SH/
-!/Assets/SH.meta
 /Assets/SH/*
 !/Assets/SH/HamaStream/
-!/Assets/SH/HamaStream.meta
 /Docs/*
 !/Docs/USER_MANUAL.md
 !/Docs/QUICK_START.md
@@ -26,6 +25,10 @@
 /Docs/images/*
 !/Docs/images/overview.png
 !/Docs/images/overview-annotated.svg
+!/Docs/images/HamaStreamHeader.jpg
+!/Docs/images/inspector-controller-references.png
+!/Docs/images/inspector-controller-settings.png
+!/Docs/images/inspector-playlist.png
 /ClientSimStorage/
 /Packages/
 /ProjectSettings/

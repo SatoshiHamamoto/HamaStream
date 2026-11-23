@@ -25,6 +25,12 @@ public static class HamaStreamBuilder
     private const string RenderTextureFolder = RootFolder + "/RenderTextures";
     private const string PrefabPath = PrefabFolder + "/HamaStream.prefab";
     private const string MaterialPath = MaterialFolder + "/HamaStreamScreen.mat";
+    private const string DisplayMaterialPath = MaterialFolder + "/HamaStreamDisplay.mat";
+    private const string VideoBlitMaterialPath = MaterialFolder + "/HamaStreamVideoBlit.mat";
+    private const string DisplayShaderPath =
+        MaterialFolder + "/HamaStreamVideoScreen.shader";
+    private const string BlitShaderPath =
+        "Packages/dev.architech.protv/Resources/Shaders/ProTVBlit.shader";
     private const string OutputRenderTexturePath =
         RenderTextureFolder + "/HamaStreamOutput.renderTexture";
     private const float ContentScale = 0.25f;
@@ -85,11 +91,14 @@ public static class HamaStreamBuilder
         HamaStreamController existingController = existingPrefab != null
             ? existingPrefab.GetComponent<HamaStreamController>() : null;
         Texture standbyTexture = existingController != null ? existingController.StandbyTexture : null;
+        bool autoPlayOnStart = existingController != null && existingController.AutoPlayOnStart;
+        VRCUrl autoPlayUrl = existingController != null && existingController.AutoPlayUrl != null
+            ? existingController.AutoPlayUrl : new VRCUrl("");
 
         GameObject root = PrefabUtility.LoadPrefabContents(SourcePrefabPath);
         try
         {
-            BuildPrefabContents(root, standbyTexture);
+            BuildPrefabContents(root, standbyTexture, autoPlayOnStart, autoPlayUrl);
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
         }
         catch
@@ -226,34 +235,37 @@ public static class HamaStreamBuilder
         Selection.activeGameObject = controller.gameObject;
     }
 
-    [MenuItem("Tools/HamaStream/Configure Scene Playlists")]
-    public static void ConfigureScenePlaylists()
+    [MenuItem("Tools/HamaStream/Configure Scene")]
+    public static void ConfigureScene()
     {
         Scene scene = SceneManager.GetActiveScene();
         if (EditorApplication.isPlayingOrWillChangePlaymode || !scene.IsValid() ||
             !scene.isLoaded || EditorSceneManager.IsPreviewScene(scene) ||
             PrefabStageUtility.GetCurrentPrefabStage() != null)
         {
-            Debug.LogError("[HamaStream] Open the world scene in Edit Mode before configuring playlists.");
+            Debug.LogError("[HamaStream] Open the world scene in Edit Mode before configuring the scene.");
             return;
         }
 
-        int count = 0;
+        var controllers = new List<HamaStreamController>();
         foreach (GameObject root in scene.GetRootGameObjects())
         {
-            foreach (HamaStreamController controller in
-                     root.GetComponentsInChildren<HamaStreamController>(true))
-            {
-                ConfigurePlaylistsForRoot(controller);
-                count++;
-            }
+            controllers.AddRange(root.GetComponentsInChildren<HamaStreamController>(true));
         }
 
-        if (count > 0)
+        HamaStreamController[] peers = controllers.ToArray();
+        foreach (HamaStreamController controller in peers)
+        {
+            ConfigurePlaylistsForRoot(controller);
+        }
+        ConfigureUrlLoadPeers(peers);
+
+        if (peers.Length > 0)
         {
             EditorSceneManager.MarkSceneDirty(scene);
         }
-        Debug.Log("[HamaStream] Configured playlists for " + count + " players. Save the scene.");
+        Debug.Log("[HamaStream] Configured playlists and URL load peers for " + peers.Length +
+                  " players in scene " + scene.name + ". Save the scene.");
     }
 
     private static void ConfigurePlaylistsForRoot(HamaStreamController controller)
@@ -386,8 +398,7 @@ public static class HamaStreamBuilder
         }
     }
 
-    [MenuItem("Tools/HamaStream/Configure Scene URL Load Peers")]
-    public static void ConfigureSceneUrlLoadPeers()
+    private static void ConfigureSceneUrlLoadPeers()
     {
         Scene scene = SceneManager.GetActiveScene();
         if (EditorApplication.isPlayingOrWillChangePlaymode || !scene.IsValid() ||
@@ -405,6 +416,19 @@ public static class HamaStreamBuilder
         }
 
         HamaStreamController[] peers = controllers.ToArray();
+        ConfigureUrlLoadPeers(peers);
+
+        if (peers.Length > 0)
+        {
+            EditorSceneManager.MarkSceneDirty(scene);
+        }
+
+        Debug.Log("[HamaStream] Configured URL load peers for " + peers.Length +
+                  " players in scene " + scene.name + ". Save the scene after checking the references.");
+    }
+
+    private static void ConfigureUrlLoadPeers(HamaStreamController[] peers)
+    {
         foreach (HamaStreamController controller in peers)
         {
             UdonBehaviour backing = UdonSharpEditorUtility.GetBackingUdonBehaviour(controller);
@@ -425,17 +449,10 @@ public static class HamaStreamBuilder
                 EditorUtility.SetDirty(backing);
             }
         }
-
-        if (peers.Length > 0)
-        {
-            EditorSceneManager.MarkSceneDirty(scene);
-        }
-
-        Debug.Log("[HamaStream] Configured URL load peers for " + peers.Length +
-                  " players in scene " + scene.name + ". Save the scene after checking the references.");
     }
 
-    private static void BuildPrefabContents(GameObject root, Texture standbyTexture)
+    private static void BuildPrefabContents(
+        GameObject root, Texture standbyTexture, bool autoPlayOnStart, VRCUrl autoPlayUrl)
     {
         root.name = "HamaStream";
         root.transform.localPosition = Vector3.zero;
@@ -468,7 +485,8 @@ public static class HamaStreamBuilder
         Transform screen = videoScreen.transform;
         screen.localPosition = new Vector3(0f, 5f, 0f);
         screen.localScale = new Vector3(15f, 8.474577f, 65.70509f);
-        MeshRenderer standbyScreenRenderer = CreateStandbyScreen(videoScreen);
+        MeshRenderer displayScreenRenderer = CreateDisplayScreen(videoScreen);
+        videoScreen.GetComponent<MeshRenderer>().enabled = false;
         PrepareStereoSpeakers(videoSpeaker, videoPlayer);
         PrepareUrlInput(urlInput);
 
@@ -558,8 +576,11 @@ public static class HamaStreamBuilder
             playlistCanvas2.gameObject.AddUdonSharpComponent<HamaStreamPlaylistController>();
         controller.VideoPlayer = videoPlayer;
         controller.VideoScreenRenderer = videoScreen.GetComponent<MeshRenderer>();
-        controller.StandbyScreenRenderer = standbyScreenRenderer;
+        controller.DisplayScreenRenderer = displayScreenRenderer;
+        controller.VideoBlitMaterial = GetVideoBlitMaterial();
         controller.StandbyTexture = standbyTexture;
+        controller.AutoPlayOnStart = autoPlayOnStart;
+        controller.AutoPlayUrl = autoPlayUrl;
         RenderTexture outputTexture = AssetDatabase.LoadAssetAtPath<RenderTexture>(
             OutputRenderTexturePath);
         if (outputTexture == null)
@@ -604,6 +625,10 @@ public static class HamaStreamBuilder
             playButton.onClick,
             backingBehaviour.SendCustomEvent,
             nameof(HamaStreamController.PlayFromInput));
+        UnityEventTools.AddStringPersistentListener(
+            urlInput.onEndEdit,
+            backingBehaviour.SendCustomEvent,
+            nameof(HamaStreamController.PlayFromSubmittedUrl));
         UnityEventTools.AddStringPersistentListener(
             pauseButton.onClick,
             backingBehaviour.SendCustomEvent,
@@ -1230,7 +1255,31 @@ public static class HamaStreamBuilder
         renderer.sharedMaterial = material;
     }
 
-    private static MeshRenderer CreateStandbyScreen(VRCAVProVideoScreen videoScreen)
+    private static Material GetVideoBlitMaterial()
+    {
+        Shader blitShader = AssetDatabase.LoadAssetAtPath<Shader>(BlitShaderPath);
+        if (blitShader == null)
+        {
+            throw new MissingReferenceException("The ProTV blit shader was not found. Install ArchiTech.ProTV before rebuilding HamaStream.");
+        }
+
+        Material material = AssetDatabase.LoadAssetAtPath<Material>(VideoBlitMaterialPath);
+        if (material == null)
+        {
+            material = new Material(blitShader);
+            material.name = "HamaStreamVideoBlit";
+            AssetDatabase.CreateAsset(material, VideoBlitMaterialPath);
+        }
+        else if (material.shader != blitShader)
+        {
+            material.shader = blitShader;
+            EditorUtility.SetDirty(material);
+        }
+
+        return material;
+    }
+
+    private static MeshRenderer CreateDisplayScreen(VRCAVProVideoScreen videoScreen)
     {
         MeshFilter sourceFilter = videoScreen.GetComponent<MeshFilter>();
         MeshRenderer sourceRenderer = videoScreen.GetComponent<MeshRenderer>();
@@ -1240,16 +1289,33 @@ public static class HamaStreamBuilder
             throw new MissingReferenceException("The AVPro screen mesh or material was not found.");
         }
 
-        GameObject standby = new GameObject("StandbyScreen", typeof(MeshFilter), typeof(MeshRenderer));
-        standby.transform.SetParent(videoScreen.transform, false);
-        standby.transform.localPosition = new Vector3(0f, 0f, -0.002f);
-        standby.GetComponent<MeshFilter>().sharedMesh = sourceFilter.sharedMesh;
+        Shader displayShader = AssetDatabase.LoadAssetAtPath<Shader>(DisplayShaderPath);
+        if (displayShader == null)
+        {
+            throw new MissingReferenceException("The HamaStream display shader was not found.");
+        }
 
-        MeshRenderer renderer = standby.GetComponent<MeshRenderer>();
-        renderer.sharedMaterial = sourceRenderer.sharedMaterial;
+        Material displayMaterial = AssetDatabase.LoadAssetAtPath<Material>(DisplayMaterialPath);
+        if (displayMaterial == null)
+        {
+            displayMaterial = new Material(displayShader);
+            displayMaterial.name = "HamaStreamDisplay";
+            AssetDatabase.CreateAsset(displayMaterial, DisplayMaterialPath);
+        }
+        else if (displayMaterial.shader != displayShader)
+        {
+            displayMaterial.shader = displayShader;
+            EditorUtility.SetDirty(displayMaterial);
+        }
+
+        GameObject display = new GameObject("DisplayScreen", typeof(MeshFilter), typeof(MeshRenderer));
+        display.transform.SetParent(videoScreen.transform, false);
+        display.GetComponent<MeshFilter>().sharedMesh = sourceFilter.sharedMesh;
+
+        MeshRenderer renderer = display.GetComponent<MeshRenderer>();
+        renderer.sharedMaterial = displayMaterial;
         renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         renderer.receiveShadows = false;
-        renderer.enabled = false;
         return renderer;
     }
 

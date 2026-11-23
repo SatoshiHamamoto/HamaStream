@@ -21,11 +21,16 @@ public class HamaStreamController : UdonSharpBehaviour
     public Text OwnerText;
     public HamaStreamPlaylistController[] PlaylistControllers = new HamaStreamPlaylistController[0];
 
-    [Header("Render Texture Output")]
+    [Header("Auto Play")]
+    public bool AutoPlayOnStart;
+    public VRCUrl AutoPlayUrl = new VRCUrl("");
+
+    [Header("Video Rendering")]
     public bool EnableRenderTextureOutput;
     public MeshRenderer VideoScreenRenderer;
-    public MeshRenderer StandbyScreenRenderer;
+    public MeshRenderer DisplayScreenRenderer;
     public RenderTexture OutputRenderTexture;
+    public Material VideoBlitMaterial;
     public Texture StandbyTexture;
 
     [Header("Playback Area")]
@@ -77,6 +82,10 @@ public class HamaStreamController : UdonSharpBehaviour
     private string _loadedUrlText = "";
     private int _appliedPlayRevision = -1;
     private VRCUrl _emptyUrl = new VRCUrl("");
+    private MaterialPropertyBlock _videoSourceProperties;
+    private int _videoSourceMainTexId;
+    private int _videoSourceMainTexSTId;
+    private RenderTexture _correctedVideoTexture;
 
     private void Start()
     {
@@ -86,11 +95,21 @@ public class HamaStreamController : UdonSharpBehaviour
             return;
         }
 
+        VideoScreenRenderer.enabled = false;
+        DisplayScreenRenderer.enabled = true;
         UpdateInitialPlaybackAreaState();
         UpdateOwnerText();
         if (Networking.IsOwner(gameObject))
         {
             _syncedLoop = DefaultLoop;
+            if (AutoPlayOnStart && !string.IsNullOrEmpty(GetUrlText(AutoPlayUrl)) &&
+                !_syncedPlaying && string.IsNullOrEmpty(GetUrlText(_syncedUrl)) &&
+                _syncedPlayRevision == 0)
+            {
+                _syncedUrl = AutoPlayUrl;
+                _syncedPlaying = true;
+                _syncedPlayRevision++;
+            }
             RequestSerialization();
         }
         ApplySharedState();
@@ -101,6 +120,10 @@ public class HamaStreamController : UdonSharpBehaviour
         VRCPlayerApi localPlayer = Networking.LocalPlayer;
         SetLocalPlayerInPlaybackArea(
             Utilities.IsValid(localPlayer) && IsPlayerInsidePlaybackArea(localPlayer));
+    }
+
+    private void LateUpdate()
+    {
         UpdateVideoTextures();
     }
 
@@ -113,18 +136,86 @@ public class HamaStreamController : UdonSharpBehaviour
 
         bool showStandby = !_syncedPlaying || !_hasLoadedUrl || _waitingForVideoReady ||
                            _videoEnded || _videoFailed;
-        if (StandbyScreenRenderer != null)
+        Texture videoTexture = null;
+        Vector4 videoTextureST = new Vector4(1f, 1f, 0f, 0f);
+        if (VideoScreenRenderer != null)
         {
-            if (StandbyTexture != null && showStandby)
+            Vector4 sourceTextureST = Vector4.zero;
+            if (VideoScreenRenderer.HasPropertyBlock())
             {
-                Material standbyMaterial = StandbyScreenRenderer.material;
-                if (standbyMaterial != null)
+                if (_videoSourceProperties == null)
                 {
-                    standbyMaterial.SetTexture("_MainTex", StandbyTexture);
+                    _videoSourceProperties = new MaterialPropertyBlock();
+                    _videoSourceMainTexId = VRCShader.PropertyToID("_MainTex");
+                    _videoSourceMainTexSTId = VRCShader.PropertyToID("_MainTex_ST");
+                }
+                VideoScreenRenderer.GetPropertyBlock(_videoSourceProperties);
+                if (_videoSourceProperties.HasTexture(_videoSourceMainTexId))
+                {
+                    videoTexture = _videoSourceProperties.GetTexture(_videoSourceMainTexId);
+                    sourceTextureST = _videoSourceProperties.GetVector(_videoSourceMainTexSTId);
                 }
             }
+            if (videoTexture == null)
+            {
+                Material sourceMaterial = VideoScreenRenderer.material;
+                if (sourceMaterial != null)
+                {
+                    videoTexture = sourceMaterial.GetTexture("_MainTex");
+                    sourceTextureST = sourceMaterial.GetVector("_MainTex_ST");
+                }
+            }
+            if (sourceTextureST != Vector4.zero)
+            {
+                videoTextureST = sourceTextureST;
+            }
+        }
 
-            StandbyScreenRenderer.enabled = StandbyTexture != null && showStandby;
+        Texture sourceTexture = showStandby ? StandbyTexture : videoTexture;
+        if (sourceTexture != null && VideoBlitMaterial != null)
+        {
+            if (_correctedVideoTexture == null)
+            {
+                _correctedVideoTexture = VRCRenderTexture.GetTemporary(
+                    16, 16, 0, RenderTextureFormat.ARGB64, RenderTextureReadWrite.sRGB, 1);
+                _correctedVideoTexture.wrapMode = TextureWrapMode.Clamp;
+                _correctedVideoTexture.filterMode = FilterMode.Trilinear;
+            }
+
+            if (_correctedVideoTexture.width != sourceTexture.width ||
+                _correctedVideoTexture.height != sourceTexture.height)
+            {
+                if (_correctedVideoTexture.IsCreated()) _correctedVideoTexture.Release();
+                _correctedVideoTexture.width = sourceTexture.width;
+                _correctedVideoTexture.height = sourceTexture.height;
+            }
+            if (!_correctedVideoTexture.IsCreated()) _correctedVideoTexture.Create();
+
+            VideoBlitMaterial.SetVector("_MainTex_ST_Override", showStandby
+                ? new Vector4(1f, 1f, 0f, 0f) : videoTextureST);
+            VideoBlitMaterial.SetVector("_GammaZone", new Vector4(1f, 1f, 0f, 0f));
+            VideoBlitMaterial.SetFloat("_AVPro", !showStandby && sourceTexture.name.Contains("AVPro") ? 1f : 0f);
+            VideoBlitMaterial.SetFloat("_SkipGamma", 0f);
+            VRCGraphics.Blit(sourceTexture, _correctedVideoTexture, VideoBlitMaterial, 0);
+        }
+        else if (_correctedVideoTexture != null && _correctedVideoTexture.IsCreated())
+        {
+            _correctedVideoTexture.Release();
+        }
+
+        if (DisplayScreenRenderer != null)
+        {
+            Material displayMaterial = DisplayScreenRenderer.material;
+            if (displayMaterial != null)
+            {
+                bool hasDisplayTexture = sourceTexture != null && VideoBlitMaterial != null &&
+                    _correctedVideoTexture != null && _correctedVideoTexture.IsCreated();
+                displayMaterial.SetTexture("_MainTex", StandbyTexture);
+                displayMaterial.SetTexture("_VideoTex", hasDisplayTexture ? _correctedVideoTexture : null);
+                displayMaterial.SetFloat("_UseVideoTex", hasDisplayTexture ? 1f : 0f);
+                displayMaterial.SetFloat("_SourceAspect", sourceTexture != null && sourceTexture.height > 0
+                    ? (float)sourceTexture.width / sourceTexture.height : 1.777778f);
+            }
         }
 
         if (!EnableRenderTextureOutput || OutputRenderTexture == null)
@@ -132,31 +223,28 @@ public class HamaStreamController : UdonSharpBehaviour
             return;
         }
 
-        if (showStandby)
+        if (sourceTexture == null || _correctedVideoTexture == null ||
+            !_correctedVideoTexture.IsCreated())
         {
-            if (StandbyTexture != null && StandbyTexture != OutputRenderTexture)
-            {
-                VRCGraphics.Blit(StandbyTexture, OutputRenderTexture);
-            }
+            if (OutputRenderTexture.IsCreated()) OutputRenderTexture.Release();
             return;
         }
 
-        if (VideoScreenRenderer == null)
+        if (OutputRenderTexture != _correctedVideoTexture)
+        {
+            if (!OutputRenderTexture.IsCreated()) OutputRenderTexture.Create();
+            VRCGraphics.Blit(_correctedVideoTexture, OutputRenderTexture);
+        }
+    }
+
+    public void PlayFromSubmittedUrl()
+    {
+        if (UrlInput == null || string.IsNullOrEmpty(GetUrlText(UrlInput.GetUrl())))
         {
             return;
         }
 
-        Material screenMaterial = VideoScreenRenderer.material;
-        if (screenMaterial == null)
-        {
-            return;
-        }
-
-        Texture videoTexture = screenMaterial.GetTexture("_MainTex");
-        if (videoTexture != null && videoTexture != OutputRenderTexture)
-        {
-            VRCGraphics.Blit(videoTexture, OutputRenderTexture);
-        }
+        PlayFromInput();
     }
 
     public void PlayFromInput()
@@ -704,7 +792,9 @@ public class HamaStreamController : UdonSharpBehaviour
 
     private bool HasRequiredReferences()
     {
-        return VideoPlayer != null && UrlInput != null && PlaybackArea != null && PlaybackArea.isTrigger;
+        return VideoPlayer != null && UrlInput != null && PlaybackArea != null && PlaybackArea.isTrigger &&
+               VideoScreenRenderer != null && DisplayScreenRenderer != null && VideoBlitMaterial != null &&
+               (!EnableRenderTextureOutput || OutputRenderTexture != null);
     }
 
     private void UpdateInitialPlaybackAreaState()

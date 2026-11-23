@@ -2,6 +2,8 @@
 
 [README](../README.md) | [詳細マニュアル](USER_MANUAL.md)
 
+映像補正・画面表示用の ProTV 由来シェーダーは HamaStream に同梱されています。ProTV パッケージの別途導入は不要です。再配布条件は [第三者ライセンス](../THIRD_PARTY_NOTICES.md) を確認してください。
+
 ## 構成
 
 画像の番号が、各部分の位置を示します。

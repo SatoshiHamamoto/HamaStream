@@ -4,6 +4,12 @@
 
 HamaStream は VRChat の 音楽イベント向けの動画・配信プレイヤーです。ワールド内の複数配置に対応するため制作されました。各プレイヤーにはコライダーで再生範囲が設定され、ユーザーが範囲内にいるプレーヤーのみ再生することでワールド負荷の低減を実現しています。
 
+
+
+## ダウンロード
+
+[HamaStream.unitypackage](Releases/HamaStream.unitypackage) をダウンロードし、Unity の `Assets > Import Package > Custom Package...` からインポートしてください。VRChat Worlds SDK と UdonSharp は事前に導入してください。
+
 ## 動作環境
 
 - VRChat Worlds SDK と UdonSharp を導入済みの Unity プロジェクト
@@ -27,6 +33,10 @@ HamaStream は VRChat の 音楽イベント向けの動画・配信プレイヤ
 
 更新時は同じ Unity プロジェクトへ新しい版の `.unitypackage` をインポートしてください。
 
+## ProTV 由来のシェーダー
+
+映像補正用の `HamaStreamVideoBlit.shader` は ArchiTech.ProTV 3.0.0-beta.31 の `ProTVBlit.shader` を改変したものです。画面表示用の `HamaStreamVideoScreen.shader` も、同じ ProTV の `ProTVVideoScreen.shader` を改変したものです。両シェーダーを HamaStream に同梱しているため、ArchiTech.ProTV パッケージの別途導入は不要です。出自、変更内容、再配布条件は [第三者ライセンス](THIRD_PARTY_NOTICES.md) を確認してください。
+
 ## ライセンス
 
-HamaStream の配布対象ファイルは [MIT License](LICENSE) です。VRChat SDK、UdonSharp、AVPro Video などの外部製品はこのライセンスの対象ではありません。
+HamaStream の独自ファイルは [MIT License](LICENSE) です。同梱する映像補正・画面表示 Shader は ArchiTech.ProTV 由来で、[第三者ライセンス](THIRD_PARTY_NOTICES.md) が適用されます。VRChat SDK や UdonSharp は同梱しません。

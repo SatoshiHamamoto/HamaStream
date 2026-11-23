@@ -30,7 +30,7 @@ public static class HamaStreamBuilder
     private const string DisplayShaderPath =
         MaterialFolder + "/HamaStreamVideoScreen.shader";
     private const string BlitShaderPath =
-        "Packages/dev.architech.protv/Resources/Shaders/ProTVBlit.shader";
+        MaterialFolder + "/HamaStreamVideoBlit.shader";
     private const string OutputRenderTexturePath =
         RenderTextureFolder + "/HamaStreamOutput.renderTexture";
     private const float ContentScale = 0.25f;
@@ -1260,7 +1260,7 @@ public static class HamaStreamBuilder
         Shader blitShader = AssetDatabase.LoadAssetAtPath<Shader>(BlitShaderPath);
         if (blitShader == null)
         {
-            throw new MissingReferenceException("The ProTV blit shader was not found. Install ArchiTech.ProTV before rebuilding HamaStream.");
+            throw new MissingReferenceException("The bundled HamaStream video correction shader was not found.");
         }
 
         Material material = AssetDatabase.LoadAssetAtPath<Material>(VideoBlitMaterialPath);

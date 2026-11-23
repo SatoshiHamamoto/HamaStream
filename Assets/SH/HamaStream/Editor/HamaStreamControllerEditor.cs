@@ -110,7 +110,7 @@ public class HamaStreamControllerEditor : Editor
         }
         if (_videoBlitMaterial.objectReferenceValue == null)
         {
-            EditorGUILayout.HelpBox("Rebuild the HamaStream prefab to assign the ProTV blit material.", MessageType.Warning);
+            EditorGUILayout.HelpBox("Rebuild the HamaStream prefab to assign the video correction material.", MessageType.Warning);
         }
         if (_displayScreenRenderer.objectReferenceValue == null)
         {

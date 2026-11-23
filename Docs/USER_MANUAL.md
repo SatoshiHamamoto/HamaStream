@@ -6,6 +6,8 @@
 
 VRChat PC 版のワールドで動作します。開発環境は Unity 2022.3.22f1、VRChat Worlds SDK、UdonSharp です。Quest 版は対象外です。動画再生には SDK の AVPro Video を使用します。
 
+映像補正と画面表示には ArchiTech.ProTV 由来の改変シェーダーを使用します。HamaStream に同梱されるため ProTV パッケージを別途導入する必要はありません。シェーダーの出自とライセンスは [第三者ライセンス](../THIRD_PARTY_NOTICES.md) に記載しています。
+
 ## セットアップの詳細
 
 1. VRChat Worlds SDK と UdonSharp を導入した Unity 2022.3.22f1 プロジェクトを用意します。配布された `.unitypackage` を `Assets > Import Package > Custom Package...` から開き、全項目をインポートします。
